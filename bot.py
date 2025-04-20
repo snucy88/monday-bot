@@ -80,26 +80,10 @@ async def on_message(message):
         remember_like(user_id, l)
         update_topic(user_id, "Liebe")
 
-    if content.startswith("!profil") or content.startswith("!wasweisstdumontag"):
-        profile = get_user_profile(user_id)
-        name = profile.get("name", "Unbekannt")
-        facts = "\n".join(f"- {f}" for f in profile.get("facts", []))
-        likes = ", ".join(profile.get("likes", []))
-        topics = ", ".join(profile.get("topics", []))
-        await message.channel.send(f"""
-👤 Profil von {name}:
-🔹 Likes: {likes or 'Keine'}
-🔹 Themen zuletzt: {topics or 'Nichts'}
-🔹 Fakten über dich:
-{facts or 'Noch nichts interessantes...'}
-""")
-        return
-
     if content in ["was hast du gesagt", "wiederhol das", "was war das nochmal", "letzte antwort"]:
         last = get_last_response(user_id)
         if last:
-            await message.channel.send(f"Letzter Gedanke von mir:
-> {last}")
+            await message.channel.send(f"Letzter Gedanke von mir:\n> {last}")
         else:
             await message.channel.send("Ich habe anscheinend nichts Wichtiges gesagt. Wie tragisch.")
         return
