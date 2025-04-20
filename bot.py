@@ -25,16 +25,22 @@ CONVO_TIMEOUT = 600  # 10 Minuten
 HISTORY_FILE = "conversation_history.json"
 def load_history():
     if not os.path.exists(HISTORY_FILE):
+        print("[INFO] Keine bestehende Verlauf-Datei gefunden. Lege neue an.")
         return {}
     try:
-        with open(HISTORY_FILE, "r") as f:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"[ERROR] Fehler beim Laden des Verlaufs: {e}")
         return {}
 
 def save_history(history):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history, f, indent=2)
+    try:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2)
+        print("[INFO] Verlauf erfolgreich gespeichert.")
+    except IOError as e:
+        print(f"[ERROR] Fehler beim Speichern des Verlaufs: {e}")
 
 def add_to_history(user_id, message, response):
     history = load_history()
