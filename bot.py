@@ -1,12 +1,12 @@
 import discord
 import os
 import time
-import json
 from openai import OpenAI
 from logic.prompts import PROMPT
 from logic.triggers import has_trigger
 from logic.context_handler import is_followup, update_context
 from logic.memory import init_user, remember_fact, remember_like, update_topic, get_user_profile
+from logic.cloud_history import add_to_history, get_last_response
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -20,45 +20,6 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 # 🧠 Neue Variable für aktive Konversationen
 active_conversations = {}  # { user_id: (is_active, timestamp) }
 CONVO_TIMEOUT = 600  # 10 Minuten
-
-# 🔄 Verlauf speichern
-HISTORY_FILE = "conversation_history.json"
-def load_history():
-    if not os.path.exists(HISTORY_FILE):
-        print("[INFO] Keine bestehende Verlauf-Datei gefunden. Lege neue an.")
-        try:
-            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-                json.dump({}, f)
-        except IOError as e:
-            print(f"[ERROR] Konnte Verlauf-Datei nicht erstellen: {e}")
-        return {}
-    try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        print(f"[ERROR] Fehler beim Laden des Verlaufs: {e}")
-        return {}
-
-def save_history(history):
-    try:
-        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(history, f, indent=2)
-        print("[INFO] Verlauf erfolgreich gespeichert.")
-    except IOError as e:
-        print(f"[ERROR] Fehler beim Speichern des Verlaufs: {e}")
-
-def add_to_history(user_id, message, response):
-    history = load_history()
-    if user_id not in history:
-        history[user_id] = []
-    history[user_id].append({"user": message, "monday": response})
-    save_history(history)
-
-def get_last_response(user_id):
-    history = load_history()
-    if user_id in history and history[user_id]:
-        return history[user_id][-1]["monday"]
-    return None
 
 @client.event
 async def on_ready():
@@ -127,7 +88,7 @@ async def on_message(message):
             reply = response.choices[0].message.content
             await message.channel.send(reply)
             update_context(user_id)
-            add_to_history(user_id, message.content, reply)
+            add_to_history(user_id, username, message.content, reply)
         except Exception as e:
             await message.channel.send(f"Ich bin verwirrt. Wie du. ({e})")
 
