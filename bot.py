@@ -15,6 +15,9 @@ client = discord.Client(intents=intents)
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
+# 🧠 Neue Variable für aktive Konversationen
+active_conversations = {}
+
 @client.event
 async def on_ready():
     print(f"{client.user} ist online – zynisch, wach und bereit.")
@@ -61,11 +64,15 @@ async def on_message(message):
 """)
         return
 
-    if (
+    should_respond = (
         client.user.mentioned_in(message)
         or has_trigger(content)
-        or is_followup(message.author.id, content)
-    ):
+        or is_followup(user_id, content)
+        or active_conversations.get(user_id, False)
+    )
+
+    if should_respond:
+        active_conversations[user_id] = True
         try:
             response = openai_client.chat.completions.create(
                 model="gpt-4",
@@ -75,7 +82,7 @@ async def on_message(message):
                 ]
             )
             await message.channel.send(response.choices[0].message.content)
-            update_context(message.author.id)
+            update_context(user_id)
         except Exception as e:
             await message.channel.send(f"Ich bin verwirrt. Wie du. ({e})")
 
