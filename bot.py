@@ -7,7 +7,7 @@ from logic.triggers import has_trigger
 from logic.context_handler import is_followup, update_context
 from logic.memory import init_user, remember_fact, remember_like, update_topic, get_user_profile
 from logic.cloud_history import add_to_history
-from logic.vector_store import save_embedding, query_similar_messages  # NEU
+from logic.vector_store import store_embedding as save_embedding, query_similar_messages
 from logic.embedding import get_embedding  # NEU
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
