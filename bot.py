@@ -1,5 +1,6 @@
 import discord
 import os
+import time
 from openai import OpenAI
 from logic.prompts import PROMPT
 from logic.triggers import has_trigger
@@ -16,7 +17,8 @@ client = discord.Client(intents=intents)
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 🧠 Neue Variable für aktive Konversationen
-active_conversations = {}
+active_conversations = {}  # { user_id: (is_active, timestamp) }
+CONVO_TIMEOUT = 600  # 10 Minuten
 
 @client.event
 async def on_ready():
@@ -64,15 +66,20 @@ async def on_message(message):
 """)
         return
 
+    # 🧠 Gesprächszeit überprüfen
+    now = time.time()
+    is_active, last_time = active_conversations.get(user_id, (False, 0))
+    timed_out = now - last_time > CONVO_TIMEOUT
+
     should_respond = (
         client.user.mentioned_in(message)
         or has_trigger(content)
         or is_followup(user_id, content)
-        or active_conversations.get(user_id, False)
+        or (is_active and not timed_out)
     )
 
     if should_respond:
-        active_conversations[user_id] = True
+        active_conversations[user_id] = (True, now)
         try:
             response = openai_client.chat.completions.create(
                 model="gpt-4",
