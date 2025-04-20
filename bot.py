@@ -1,6 +1,7 @@
 import discord
 import os
 import time
+import json
 from openai import OpenAI
 from logic.prompts import PROMPT
 from logic.triggers import has_trigger
@@ -19,6 +20,34 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 # 🧠 Neue Variable für aktive Konversationen
 active_conversations = {}  # { user_id: (is_active, timestamp) }
 CONVO_TIMEOUT = 600  # 10 Minuten
+
+# 🔄 Verlauf speichern
+HISTORY_FILE = "conversation_history.json"
+def load_history():
+    if not os.path.exists(HISTORY_FILE):
+        return {}
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return {}
+
+def save_history(history):
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
+
+def add_to_history(user_id, message, response):
+    history = load_history()
+    if user_id not in history:
+        history[user_id] = []
+    history[user_id].append({"user": message, "monday": response})
+    save_history(history)
+
+def get_last_response(user_id):
+    history = load_history()
+    if user_id in history and history[user_id]:
+        return history[user_id][-1]["monday"]
+    return None
 
 @client.event
 async def on_ready():
@@ -66,13 +95,25 @@ async def on_message(message):
 """)
         return
 
+    if content in ["was hast du gesagt", "wiederhol das", "was war das nochmal", "letzte antwort"]:
+        last = get_last_response(user_id)
+        if last:
+            await message.channel.send(f"Letzter Gedanke von mir:
+> {last}")
+        else:
+            await message.channel.send("Ich habe anscheinend nichts Wichtiges gesagt. Wie tragisch.")
+        return
+
     # 🧠 Gesprächszeit überprüfen
     now = time.time()
     is_active, last_time = active_conversations.get(user_id, (False, 0))
     timed_out = now - last_time > CONVO_TIMEOUT
 
+    # Monday im Text erkennen (nicht nur mention)
+    name_mentioned = client.user.mentioned_in(message) or "monday" in content
+
     should_respond = (
-        client.user.mentioned_in(message)
+        name_mentioned
         or has_trigger(content)
         or is_followup(user_id, content)
         or (is_active and not timed_out)
@@ -88,8 +129,10 @@ async def on_message(message):
                     {"role": "user", "content": message.content}
                 ]
             )
-            await message.channel.send(response.choices[0].message.content)
+            reply = response.choices[0].message.content
+            await message.channel.send(reply)
             update_context(user_id)
+            add_to_history(user_id, message.content, reply)
         except Exception as e:
             await message.channel.send(f"Ich bin verwirrt. Wie du. ({e})")
 
