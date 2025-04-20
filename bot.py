@@ -26,6 +26,11 @@ HISTORY_FILE = "conversation_history.json"
 def load_history():
     if not os.path.exists(HISTORY_FILE):
         print("[INFO] Keine bestehende Verlauf-Datei gefunden. Lege neue an.")
+        try:
+            with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+        except IOError as e:
+            print(f"[ERROR] Konnte Verlauf-Datei nicht erstellen: {e}")
         return {}
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
