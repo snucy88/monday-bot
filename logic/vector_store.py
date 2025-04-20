@@ -35,24 +35,21 @@ def store_embedding(user_id, username, input_text):
             print("[SUPABASE] Embedding gespeichert.")
     except Exception as e:
         print("[SUPABASE EXCEPTION]", e)
-        
+
 def query_similar_messages(user_id, embedding, limit=3):
-    url = f"{SUPABASE_URL}/rest/v1/conversation_memory"
+    url = f"{SUPABASE_URL}/rest/v1/rpc/match_messages"
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json"
     }
-
-    # Supabase Postgres + pgvector Ähnlichkeits-Suche
-    query = {
-        "select": "message, username, timestamp",
-        "order": f"embedding.<->.{embedding}",
-        "limit": limit,
-        "user_id": f"eq.{user_id}"
+    payload = {
+        "match_count": limit,
+        "query_embedding": embedding,
+        "user_id": user_id
     }
 
-    response = requests.get(url, headers=headers, params=query)
+    response = requests.post(url, headers=headers, json=payload)
 
     if response.status_code == 200:
         return response.json()
