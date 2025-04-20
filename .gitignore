@@ -1,0 +1,24 @@
+# Python basics
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment
+.env
+token.env
+.env.local
+.env.*.local
+
+# VS Code
+.vscode/
+
+# Mac & Windows
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Railway deployment
+railway.json
